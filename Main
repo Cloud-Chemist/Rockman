@@ -1,9 +1,14 @@
+from typing import Text
 import pyttsx3
 import speech_recognition as sr
 import datetime
 import webbrowser
 import os
 import smtplib
+import wikipedia
+import sys 
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials 
 
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty("voices")
@@ -11,6 +16,7 @@ voices = engine.getProperty("voices")
 engine.setProperty('voice', voices[1].id)
 
 def speak(audio):
+    engine = pyttsx3.init()
     engine.say(audio)
     engine.runAndWait()
 
@@ -22,7 +28,7 @@ def speaktome():
             speak("Good Afternoon")
         else: 
             speak("Good evening")
-        speak("My name is Fae.. , please tell me how may I help you. I am an automated Intelligence meant to make your life easier. Also known as A.. I... please say whatever you would like me to do or check with my master on how to program me further.")
+        speak("test")
 
 def takeCommand():
     #it tkaes microphone input from the user and returns string output)
@@ -30,13 +36,13 @@ def takeCommand():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("Listening...")
-        r.pause_threshold = 1
+        r.pause_threshold = 2
         audio = r.listen(source)
 
     try:
         print("Recognizing...")
-        query = r.recognize_google(audio, Language='en-in')
-        print(f"User said: {query}\n")
+        query = r.recognize_google(audio)
+        print('User said: {}'.format(Text))
     except Exception as e:
         #print(e)
         print("Say that again please sir...")
@@ -59,16 +65,37 @@ if __name__ == "__main__":
         if 'wikipedia' in query:
             speak('Currently Searching Wikipedia for the results you requested...')
             query = query.replace("wikipedia", "")
-            results = wikipedia.summary(query, sentences=2)
+            results = wikipedia.summary(f'{query}', sentences=5)
             speak("Based on the results I found Master..")
             print(results)
             speak(results)
+
+        elif 'type this' in query:
+            speak('type what?')
+            query = 
 
         elif 'open youtube' in query:
             webbrowser.open("youtube.com")
         
         elif 'open google' in query:
             webbrowser.open("google.com")
+
+        elif 'insult me' in query:
+            speak('Here, kill yourself to this')
+            webbrowser.open("https://www.youtube.com/watch?v=97C87r7EVQA")
+
+        elif 'look on spotify' in query:
+            spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials())
+
+            if len(sys.argv) > 1:
+                name = ' '.join(sys.argv)[1:]
+            else:
+                    name = 'Nickleback'
+            results = spotify.search(q='artist:' + name, type='artist')
+            items = results['artists']['items']
+            if len(items) > 0:
+                artist = items[0]
+                print(artist['name'], artist['images'][0]['url'])  
         
         elif 'play music' in query:
             music_dir = 'D:\\Non Critical\\songs\\Favorite Songs2'
@@ -81,8 +108,9 @@ if __name__ == "__main__":
             speak(f"Master, the time is {strTime}")
 
         elif 'open code' in query:
-            codePath = "C:\\Users\\Hoxton\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+           # codePath = "C:\Users\Hoxton\Rockman.exe"
             os.startfile(codePath)
+
         
         elif 'email to whoever' in query:
             try:
@@ -94,3 +122,4 @@ if __name__ == "__main__":
             except Exception as e:
                 print(e)
                 speak("Sorry my friend Whoever. I am unable to send this email master")
+        
