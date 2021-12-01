@@ -1,0 +1,10 @@
+((arp -a).Trim().Where{$_ -match "^\d+"}) -replace "\s+","," | 
+    ConvertFrom-Csv -Header "IPAddress","MACAddress","Type" |
+    ForEach-Object -Process `
+        {
+            [PSCustomObject]@{
+                IPAddress = $_.IPAddress
+                HostName  = (Resolve-DnsName $_.IPAddress -ErrorAction SilentlyContinue).NameHost
+                Status    = if (Test-Connection -ComputerName $_.IPAddress -Count 1 -Quiet) {'Online'} else {'Offline'}
+            }       
+        }
