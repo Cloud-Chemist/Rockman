@@ -1,0 +1,10 @@
+# please make sure to install modules 'Install-Module Indented.Net.IP -Scope CurrentUser' into your powershell if using powershell V5 in order to get the full effect. 
+# issues can still occur as this method is used when you do not know the exact subnet of the network you are searching in.
+
+
+Import-Module Indented.Net.IP
+    $IPAddresses = $(Get-NetIPAddress | ? { ($_.AddressFamily -ilike "*IPv4*") -and ($_.IPAddress -notlike "127.0.0.1") -and ($_.IPAddress -notlike "169*") } )
+
+    $ips = $ipaddresses | %{Get-NetworkRange "$($_.ipaddress)/$($_.prefixlength)"}
+
+    $ping = new-object system.net.networkinformation.ping; $ips.ipaddresstostring | %  {$ping.send($_, 1) | select address,status}
