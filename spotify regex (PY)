@@ -1,0 +1,4 @@
+import re
+a="spotify:track:3Mh4EaJcfM4v2hpY49rjg6"
+b="https://open.spotify.com/track/3Mh4EaJcfM4v2hpY49rjg6?si=nFRVStM1TpCWWtaJGWNLsg"
+re.findall(r"[\bhttps://open.\b]*spotify[\b.com\b]*[/:]*track[/:]*[A-Za-z0-9?=]+",b)
