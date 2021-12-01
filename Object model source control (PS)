@@ -1,0 +1,120 @@
+function Get-SvnStatus( [string[]] $Path   = ".", 
+                        [string]   $Filter = "^(?!unversioned|normal|external)", 
+                        [switch]   $NoFormat )
+{
+    # powershell chokes on "wc-status" and doesn't like two definitions of "item"
+    [xml]$status = ( ( Invoke-Expression "svn status $( $Path -join ',' ) --xml" ) -replace "wc-status", "svnstatus" ) `
+        -replace "item=", "itemstatus="
+
+    $statusObjects = $status.status.target | Foreach-Object { $_.entry } | Where-Object { 
+        $_.svnstatus.itemstatus -match $Filter 
+    } | Foreach-Object {
+        $_ | Select-Object @{ Name = "Status"; Expression = { $_.svnstatus.itemstatus } }, 
+                           @{ Name = "Path";   Expression = { Join-Path ( Get-Location ) $_.path } }
+    } | Sort-Object Status, Path
+
+    if ( $NoFormat )
+    {
+        $statusObjects
+    }
+    else
+    {
+        $statusObjects | Format-Table -AutoSize
+    }
+}
+
+function Get-SvnLog( [string] $Path = ".", 
+                     [int]    $Revision, 
+                     [int]    $Limit = -1, 
+                     [switch] $Verbose, 
+                     [switch] $NoFormat )
+{
+    $revisionString = ""
+    $limitString = ""
+    $verboseString = ""
+
+    if ( $Revision )
+    {
+        $revisionString = "--revision $Revision"
+    }
+
+    if ( $Limit -ne -1 )
+    {
+        $limitString = "--limit $Limit"
+    }
+
+    if ( $Verbose )
+    {
+        $verboseString = "--verbose"
+    }
+
+    [xml]$log = Invoke-Expression "svn log $( $path -join ',' ) --xml $revisionString $limitString $verboseString"
+
+    $logObjects = $log.log.logentry | Foreach-Object {
+        $logEntry = $_
+
+        $logEntry | Select-Object `
+            @{ Name = "Revision"; Expression = { [int]$logEntry.revision } },
+            @{ Name = "Author"; Expression = { $logEntry.author } },
+            @{ Name = "Date"; 
+               Expression = {
+                   if ( $NoFormat )
+                   {
+                       [datetime]$logEntry.date
+                   }
+                   else
+                   {
+                       "{0:dd/MM/yyyy hh:mm:ss}" -f [datetime]$logEntry.date
+                   }
+               } },
+            @{ Name = "Message"; Expression = { $logEntry.msg } } | 
+        Foreach-Object {
+            # add the changed path information if the $Verbose parameter has been specified
+            if ( $Verbose )
+            {
+                $_ | Select-Object Revision, Author, Date, Message,
+                    @{ Name = "ChangedPaths"; 
+                       Expression = {
+                           $paths = $logEntry.paths.path | Foreach-Object {
+                               $_ | Select-Object `
+                                   @{ Name = "Change"; 
+                                      Expression = { 
+                                          switch ( $_.action )
+                                          {
+                                              "A" { "added" }
+                                              "D" { "deleted" }
+                                              "M" { "modified" }
+                                              "R" { "replaced" }
+                                              default { $_.action }
+                                          }
+                                      } },
+                                   @{ Name = "Path"; Expression = { $_."#text" } }
+                           }
+
+                           if ( $NoFormat )
+                           {
+                               $paths
+                           }
+                           else
+                           {
+                               ( $paths | Sort-Object Change | Format-Table -AutoSize | Out-String ).Trim()
+                           }
+                       } 
+                     }
+            }
+            else
+            {
+                $_
+            }
+        }
+    }
+
+    if ( $NoFormat )
+    {
+        $logObjects
+    }
+    else
+    {
+        $logObjects | Format-List
+    }
+}
